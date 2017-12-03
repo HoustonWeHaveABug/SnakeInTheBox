@@ -31,9 +31,9 @@ void set_unroll(unroll_t *, uint32_t);
 int add_call(call_t);
 int perform_call(call_t *);
 int perform_roll(uint32_t, uint32_t, uint32_t, uint32_t);
-int perform_unroll(uint32_t);
-void print_path(int);
 void print_choice(const char *, uint32_t);
+int perform_unroll(uint32_t);
+void print_status(void);
 
 int verbose, *marks;
 unsigned time0;
@@ -75,7 +75,7 @@ int main(void) {
 	}
 	while (r && calls_size > 0);
 	marks[0]--;
-	print_path(1);
+	print_status();
 	if (choices_max > 0) {
 		free(choices);
 	}
@@ -201,9 +201,6 @@ int perform_call(call_t *call) {
 
 int perform_roll(uint32_t choice, uint32_t choices_idx, uint32_t dimensions_max, uint32_t valid) {
 	nodes++;
-	if (choices_idx+valid < choices_max) {
-		return 1;
-	}
 	if (choices_idx == choices_max) {
 		if (choices_max == 0) {
 			choices = malloc(sizeof(uint32_t));
@@ -221,9 +218,25 @@ int perform_roll(uint32_t choice, uint32_t choices_idx, uint32_t dimensions_max,
 			choices = choices_tmp;
 		}
 		choices[choices_max++] = choice;
-		print_path(0);
+		if (verbose) {
+			uint32_t i;
+			printf("%" PRIu32, dimensions_n);
+			print_choice(" = ", choices[0]);
+			for (i = 1; i < choices_max; i++) {
+				print_choice(" -> ", choices[i]);
+			}
+			puts("");
+		}
+		printf("Length %" PRIu32 " ", choices_max-1);
+		print_status();
+		if (valid == 0) {
+			return 1;
+		}
 	}
 	else {
+		if (choices_idx+valid < choices_max) {
+			return 1;
+		}
 		choices[choices_idx] = choice;
 	}
 	uint32_t weight, i;
@@ -264,6 +277,19 @@ int perform_roll(uint32_t choice, uint32_t choices_idx, uint32_t dimensions_max,
 	return 1;
 }
 
+void print_choice(const char *prefix, uint32_t choice) {
+	uint32_t weight, i;
+	printf("%s", prefix);
+	for (weight = 1, i = 0; i < dimensions_n; weight <<= 1, i++) {
+		if (choice & weight) {
+			putchar('1');
+		}
+		else {
+			putchar('0');
+		}
+	}
+}
+
 int perform_unroll(uint32_t choice) {
 	uint32_t weight, i;
 	for (weight = 1, i = 0; i < dimensions_n; weight <<= 1, i++) {
@@ -277,29 +303,7 @@ int perform_unroll(uint32_t choice) {
 	return 1;
 }
 
-void print_path(int complete) {
-	if (verbose || complete) {
-		printf("%" PRIu32, dimensions_n);
-		print_choice(" = ", choices[0]);
-		uint32_t i;
-		for (i = 1; i < choices_max; i++) {
-			print_choice(" -> ", choices[i]);
-		}
-		puts("");
-	}
-	printf("Length %" PRIu32 " Nodes %" PRIu64 " Time %us\n", choices_max-1, nodes, (unsigned)time(NULL)-time0);
+void print_status(void) {
+	printf("Nodes %" PRIu64 " Time %us\n", nodes, (unsigned)time(NULL)-time0);
 	fflush(stdout);
-}
-
-void print_choice(const char *prefix, uint32_t choice) {
-	uint32_t weight, i;
-	printf("%s", prefix);
-	for (weight = 1, i = 0; i < dimensions_n; weight <<= 1, i++) {
-		if (choice & weight) {
-			putchar('1');
-		}
-		else {
-			putchar('0');
-		}
-	}
 }
