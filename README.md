@@ -5,7 +5,7 @@ Solution to challenge https://www.reddit.com/r/dailyprogrammer/comments/7gvned/2
 You should be able to compile this program on any platform implementing inttypes.h (gcc makefile provided).
 
 The program reads 2 parameters on the standard input:
-- The number of dimensions of the hypercube
+- The number of dimensions of the hypercube (minimum 1, maximum 31)
 - Verbose mode (On = 1, Off = 0)
 
 An exhaustive search is performed using the optimization described in this paper: http://cobweb.cs.uga.edu/~potter/CompIntell/kochut.pdf.
