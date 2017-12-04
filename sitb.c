@@ -229,17 +229,11 @@ int perform_roll(uint32_t choice, uint32_t choices_idx, uint32_t dimensions_max,
 		}
 		printf("Length %" PRIu32 " ", choices_max-1);
 		print_status();
-		if (valid == 0) {
-			return 1;
-		}
 	}
 	else {
-		if (choices_idx+valid < choices_max) {
-			return 1;
-		}
 		choices[choices_idx] = choice;
 	}
-	uint32_t weight, i;
+	uint32_t weight, valid_bak = valid, i;
 	for (weight = 1, i = 0; i < dimensions_n; weight <<= 1, i++) {
 		if (choice & weight) {
 			marks[choice-weight]++;
@@ -256,6 +250,9 @@ int perform_roll(uint32_t choice, uint32_t choices_idx, uint32_t dimensions_max,
 	}
 	if (!add_unroll(choice)) {
 		return 0;
+	}
+	if (valid == valid_bak || choices_idx+valid+1 < choices_max) {
+		return 1;
 	}
 	weight = 1U << (dimensions_max-1);
 	if (dimensions_max < dimensions_n && (choice & weight)) {
