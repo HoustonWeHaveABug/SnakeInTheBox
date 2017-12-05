@@ -1,20 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
 #include <time.h>
 
-#define DIMENSIONS_MAX 31
+#define DIMENSIONS_MAX (sizeof(unsigned)*8-1)
 
 typedef struct {
-	uint32_t choice;
-	uint32_t choices_idx;
-	uint32_t dimensions_max;
-	uint32_t valid;
+	unsigned choice;
+	unsigned choices_idx;
+	unsigned dimensions_max;
+	unsigned valid;
 }
 roll_t;
 
 typedef struct {
-	uint32_t choice;
+	unsigned choice;
 }
 unroll_t;
 
@@ -24,31 +23,32 @@ typedef enum {
 }
 call_t;
 
-int add_roll(uint32_t, uint32_t, uint32_t, uint32_t);
-void set_roll(roll_t *, uint32_t, uint32_t, uint32_t, uint32_t);
-int add_unroll(uint32_t);
-void set_unroll(unroll_t *, uint32_t);
+int add_roll(unsigned, unsigned, unsigned, unsigned);
+void set_roll(roll_t *, unsigned, unsigned, unsigned, unsigned);
+int add_unroll(unsigned);
+void set_unroll(unroll_t *, unsigned);
 int add_call(call_t);
 int perform_call(call_t *);
-int perform_roll(uint32_t, uint32_t, uint32_t, uint32_t);
-void print_choice(const char *, uint32_t);
-int perform_unroll(uint32_t);
+int perform_roll(unsigned, unsigned, unsigned, unsigned);
+void print_choice(const char *, unsigned);
+int perform_unroll(unsigned);
 void print_status(void);
 
 int verbose, *marks;
-unsigned time0;
-uint32_t dimensions_n, calls_max, calls_size, rolls_max, rolls_size, unrolls_max, unrolls_size, choices_max, *choices;
-uint64_t nodes;
+unsigned dimensions_n, calls_max, calls_size, rolls_max, rolls_size, unrolls_max, unrolls_size, choices_max, time0, *choices;
+unsigned long long nodes;
 roll_t *rolls;
 unroll_t *unrolls;
 call_t *calls;
 
 int main(void) {
-	if (scanf("%" SCNu32 "%d", &dimensions_n, &verbose) != 2 || dimensions_n < 1 || dimensions_n > DIMENSIONS_MAX) {
+	int r;
+	unsigned marks_n;
+	if (scanf("%u%d", &dimensions_n, &verbose) != 2 || dimensions_n < 1 || dimensions_n > DIMENSIONS_MAX) {
 		fprintf(stderr, "Invalid number of dimensions\n");
 		return EXIT_FAILURE;
 	}
-	uint32_t marks_n = 1U << dimensions_n;
+	marks_n = 1U << dimensions_n;
 	marks = calloc((size_t)marks_n, sizeof(int));
 	if (!marks) {
 		fprintf(stderr, "Could not allocate memory for marks\n");
@@ -68,7 +68,6 @@ int main(void) {
 		free(marks);
 		return EXIT_FAILURE;
 	}
-	int r;
 	do {
 		calls_size--;
 		r = perform_call(calls+calls_size);
@@ -92,7 +91,7 @@ int main(void) {
 	return EXIT_SUCCESS;
 }
 
-int add_roll(uint32_t choice, uint32_t choices_idx, uint32_t dimensions_max, uint32_t valid) {
+int add_roll(unsigned choice, unsigned choices_idx, unsigned dimensions_max, unsigned valid) {
 	if (!add_call(CALL_ROLL)) {
 		return 0;
 	}
@@ -119,14 +118,14 @@ int add_roll(uint32_t choice, uint32_t choices_idx, uint32_t dimensions_max, uin
 	return 1;
 }
 
-void set_roll(roll_t *roll, uint32_t choice, uint32_t choices_idx, uint32_t dimensions_max, uint32_t valid) {
+void set_roll(roll_t *roll, unsigned choice, unsigned choices_idx, unsigned dimensions_max, unsigned valid) {
 	roll->choice = choice;
 	roll->choices_idx = choices_idx;
 	roll->dimensions_max = dimensions_max;
 	roll->valid = valid;
 }
 
-int add_unroll(uint32_t choice) {
+int add_unroll(unsigned choice) {
 	if (!add_call(CALL_UNROLL)) {
 		return 0;
 	}
@@ -153,7 +152,7 @@ int add_unroll(uint32_t choice) {
 	return 1;
 }
 
-void set_unroll(unroll_t *unroll, uint32_t choice) {
+void set_unroll(unroll_t *unroll, unsigned choice) {
 	unroll->choice = choice;
 }
 
@@ -199,18 +198,19 @@ int perform_call(call_t *call) {
 	return r;
 }
 
-int perform_roll(uint32_t choice, uint32_t choices_idx, uint32_t dimensions_max, uint32_t valid) {
+int perform_roll(unsigned choice, unsigned choices_idx, unsigned dimensions_max, unsigned valid) {
+	unsigned weight, valid_bak, i;
 	nodes++;
 	if (choices_idx == choices_max) {
 		if (choices_max == 0) {
-			choices = malloc(sizeof(uint32_t));
+			choices = malloc(sizeof(unsigned));
 			if (!choices) {
 				fprintf(stderr, "Could not allocate memory for choices\n");
 				return 0;
 			}
 		}
 		else {
-			uint32_t *choices_tmp = realloc(choices, sizeof(uint32_t)*(choices_max+1));
+			unsigned *choices_tmp = realloc(choices, sizeof(unsigned)*(choices_max+1));
 			if (!choices_tmp) {
 				fprintf(stderr, "Could not reallocate memory for choices\n");
 				return 0;
@@ -219,21 +219,20 @@ int perform_roll(uint32_t choice, uint32_t choices_idx, uint32_t dimensions_max,
 		}
 		choices[choices_max++] = choice;
 		if (verbose) {
-			uint32_t i;
-			printf("%" PRIu32, dimensions_n);
+			printf("%u", dimensions_n);
 			print_choice(" = ", choices[0]);
 			for (i = 1; i < choices_max; i++) {
 				print_choice(" -> ", choices[i]);
 			}
 			puts("");
 		}
-		printf("Length %" PRIu32 " ", choices_max-1);
+		printf("Length %u ", choices_max-1);
 		print_status();
 	}
 	else {
 		choices[choices_idx] = choice;
 	}
-	uint32_t weight, valid_bak = valid, i;
+	valid_bak = valid;
 	for (weight = 1, i = 0; i < dimensions_n; weight <<= 1, i++) {
 		if (choice & weight) {
 			marks[choice-weight]++;
@@ -274,8 +273,8 @@ int perform_roll(uint32_t choice, uint32_t choices_idx, uint32_t dimensions_max,
 	return 1;
 }
 
-void print_choice(const char *prefix, uint32_t choice) {
-	uint32_t weight, i;
+void print_choice(const char *prefix, unsigned choice) {
+	unsigned weight, i;
 	printf("%s", prefix);
 	for (weight = 1, i = 0; i < dimensions_n; weight <<= 1, i++) {
 		if (choice & weight) {
@@ -287,8 +286,8 @@ void print_choice(const char *prefix, uint32_t choice) {
 	}
 }
 
-int perform_unroll(uint32_t choice) {
-	uint32_t weight, i;
+int perform_unroll(unsigned choice) {
+	unsigned weight, i;
 	for (weight = 1, i = 0; i < dimensions_n; weight <<= 1, i++) {
 		if (choice & weight) {
 			marks[choice-weight]--;
@@ -301,6 +300,6 @@ int perform_unroll(uint32_t choice) {
 }
 
 void print_status(void) {
-	printf("Nodes %" PRIu64 " Time %us\n", nodes, (unsigned)time(NULL)-time0);
+	printf("Nodes %llu Time %us\n", nodes, (unsigned)time(NULL)-time0);
 	fflush(stdout);
 }
